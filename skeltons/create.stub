@@ -1,0 +1,17 @@
+package createtable
+
+import(
+    "github.com/rbrahul/go-migration"
+)
+
+
+func up() {
+Migration.create("{{table}}", func(table Table) {
+    table.string("name");
+    table.integer("ID", 10);
+});
+}
+
+func up() { 
+    Migration.drop("{{table}}");
+}
