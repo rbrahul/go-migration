@@ -19,7 +19,7 @@ type TupleInfo struct {
 	Collate          string
 	IsAutoIncrement  bool
 	CommentText      string
-	DefaultValue     interface{}
+	DefaultValue     string
 	CurrentTimeStamp bool
 	EnumValues       []string
 	IsUnSigned       bool
@@ -45,6 +45,8 @@ type ForeignInfo struct {
 	onUpdate          string
 	onDelete          string
 }
+
+var query *QueryGenerator
 
 func (fr *ForeignInfo) Referrences(key string) *ForeignInfo {
 	fr.Referrence = key
@@ -91,7 +93,7 @@ func (tpl *TupleInfo) Comment(value string) *TupleInfo {
 	return tpl
 }
 
-func (tpl *TupleInfo) Default(value interface{}) *TupleInfo {
+func (tpl *TupleInfo) Default(value string) *TupleInfo {
 	tpl.DefaultValue = value
 	return tpl
 }

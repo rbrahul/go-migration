@@ -18,5 +18,11 @@ func (mg *Schema) Create(tableName string, cb CB) {
 	mg.TableName = tableName
 	mg.createNew = true
 	table.Schema = mg
+
+	queryGenerator := &QueryGenerator{}
+	queryGenerator.Table = table
 	cb(table)
+
+	//Prepare SQL Statement
+	queryGenerator.GenerateTableStructure()
 }
