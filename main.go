@@ -17,7 +17,7 @@ func main() {
 		table.Foreign("user_id").Referrences("id").On("users").OnDelete("cascade").OnUpdate("restrict")
 		//table.FindExistingTuple()
 		table.BigInteger("ID").Autoincrement().Unsigned()
-		table.Timestamps()
+		table.String("comment").Collation("acci_general_ci")
 		table.Timestamps()
 		table.AllCommands()
 	})

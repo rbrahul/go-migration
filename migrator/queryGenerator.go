@@ -76,7 +76,7 @@ func createColumn(tupleInfo *TupleInfo) string {
 	}
 
 	if len(strings.TrimSpace(tupleInfo.CharSet)) == 0 && len(strings.TrimSpace(tupleInfo.Collate)) > 0 {
-		charSet = fmt.Sprintf(" CHARACTER SET %s", tupleInfo.CharSet)
+		charSet = fmt.Sprintf(" CHARACTER SET %s", tupleInfo.Collate)
 	}
 
 	return fmt.Sprintf("`%s` %s%s%s%s%s%s%s%s%s", colunmName, dataType, columnLength, unSigned, charSet, colation, nullAbleText, defaultValue, autoIncreament, commentText)
