@@ -50,8 +50,13 @@ func createColumn(tupleInfo *TupleInfo) string {
 	if tupleInfo.IsNullable {
 		nullAbleText = " NULL"
 	}
+
 	if tupleInfo.IsUnSigned {
 		unSigned = " UNSIGNED"
+	}
+
+	if tupleInfo.CurrentTimeStamp {
+		defaultValue = " DEFAULT CURRENT_TIMESTAMP"
 	}
 
 	if len(strings.TrimSpace(tupleInfo.DefaultValue)) > 0 {
@@ -74,7 +79,7 @@ func createColumn(tupleInfo *TupleInfo) string {
 		charSet = fmt.Sprintf(" CHARACTER SET %", tupleInfo.CharSet)
 	}
 
-	return fmt.Sprintf("%s %s%s%s%s%s%s%s%s%s", colunmName, dataType, columnLength, unSigned, charSet, colation, nullAbleText, defaultValue, autoIncreament, commentText)
+	return fmt.Sprintf("`%s` %s%s%s%s%s%s%s%s%s", colunmName, dataType, columnLength, unSigned, charSet, colation, nullAbleText, defaultValue, autoIncreament, commentText)
 }
 
 func (qg *QueryGenerator) GenerateTableStructure() {

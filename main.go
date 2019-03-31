@@ -16,6 +16,8 @@ func main() {
 		table.ENUM("category", []string{"Xx", "Xl", "M"}).Default("Xl").Comment("Shirt Size")
 		table.Foreign("user_id").Referrences("id").On("users").OnDelete("cascade").OnUpdate("restrict")
 		//table.FindExistingTuple()
+		table.BigInteger("ID").Autoincrement().Unsigned()
+		table.Timestamps()
 		table.Timestamps()
 		table.AllCommands()
 	})
