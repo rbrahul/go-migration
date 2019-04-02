@@ -36,11 +36,16 @@ const (
 //DropTable - drop a table operation
 const (
 	DropTable      = "DROP TABLE"
+	RenameTable    = "Rename TABLE"
 	DropTuple      = "DROP COLUMN"
 	RenameTuple    = "RENAME COLUMN"
+	RenameIndex    = "RENAME INDEX"
 	AddForeignKey  = "FOREIGN KEY"
 	DropForeignKey = "DROP FOREIGN KEY"
+	AddIndex       = "ADD INDEX"
 	DropIndex      = "DROP INDEX"
 	DropPrimaryKey = "DROP PRIMARY KEY"
-	DropUnique     = DropIndex
+	AddPrimaryKey  = "ADD PRIMARY KEY"
+	AddUnique      = "ADD UNQIUE"
+	DropUnique     = "DROP UNQIUE"
 )

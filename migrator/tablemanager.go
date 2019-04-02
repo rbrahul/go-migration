@@ -27,15 +27,19 @@ type TupleInfo struct {
 	IsIndexed        bool
 	IsUnique         bool
 	IsNullable       bool
-	IsForeignKey     bool
-	ForeignRelation  *ForeignInfo
+	//TODO: IsFirst and After
+	IsFirst         bool
+	AfterTupleName  string
+	ForeignRelation *ForeignInfo
+	ChangeOnly      bool
 }
 
 type Command struct {
 	OperationType   string
 	ToupleName      []string
 	ForeignRelation *ForeignInfo
-	NewColumnName   string
+	NewName         string
+	IfExists        bool
 }
 
 type ForeignInfo struct {
@@ -130,6 +134,20 @@ func (tpl *TupleInfo) SetSize(size int, precison ...int) *TupleInfo {
 		tpl.Precision = precison[0]
 	}
 	return tpl
+}
+
+func (tpl *TupleInfo) Primary() *TupleInfo {
+	tpl.IsPrimary = true
+	return tpl
+}
+
+func (tpl *TupleInfo) Unique() *TupleInfo {
+	tpl.IsUnique = true
+	return tpl
+}
+
+func (tpl *TupleInfo) Change() {
+	tpl.ChangeOnly = true
 }
 
 /*--------------------------------------*
@@ -269,12 +287,26 @@ func addCommand(tm *TableManager, touples []string, commandType string) *Command
 
 //COMMANDS - all kind of INDEX related operation
 
-func (tm *TableManager) Drop() *Command {
-	return addCommand(tm, []string{}, DropTable)
+func (tm *TableManager) Index(index []string) {
+	addCommand(tm, index, AddIndex)
+}
+
+func (tm *TableManager) Drop(string) {
+	addCommand(tm, []string{}, DropTable)
+}
+
+func (tm *TableManager) DropIfExists() {
+	command := addCommand(tm, []string{}, DropTable)
+	command.IfExists = true
 }
 
 func (tm *TableManager) DropColumn(name string) {
 	addCommand(tm, []string{name}, DropTuple)
+}
+
+func (tm *TableManager) DropColumnIfExists(name string) {
+	command := addCommand(tm, []string{name}, DropTuple)
+	command.IfExists = true
 }
 
 func (tm *TableManager) DropColumns(names []string) {
@@ -285,33 +317,43 @@ func (tm *TableManager) DropTimeStamps() {
 	tm.DropColumns([]string{"created_at", "deleted_at"})
 }
 
-func (tm *TableManager) RenameColumns(oldName string, newName string) {
+func (tm *TableManager) RenameColumn(oldName string, newName string) {
 	command := addCommand(tm, []string{oldName}, RenameTuple)
-	command.NewColumnName = newName
+	command.NewName = newName
 }
 
-func (tm *TableManager) DropPrimary(name string) {
-	addCommand(tm, []string{name}, DropPrimaryKey)
+func (tm *TableManager) RenameTable(oldName string, newName string) {
+	command := addCommand(tm, []string{oldName}, RenameTable)
+	command.NewName = newName
 }
 
-func (tm *TableManager) DropPrimaries(names []string) {
+func (tm *TableManager) RenameIndex(oldName string, newName string) {
+	command := addCommand(tm, []string{oldName}, RenameIndex)
+	command.NewName = newName
+}
+
+func (tm *TableManager) DropPrimary(names []string) {
 	addCommand(tm, names, DropPrimaryKey)
 }
 
-func (tm *TableManager) DropIndex(name string) {
-	addCommand(tm, []string{name}, DropIndex)
+func (tm *TableManager) DropIndex(name []string) {
+	addCommand(tm, name, DropIndex)
 }
 
 func (tm *TableManager) DropIndexes(names []string) {
 	addCommand(tm, names, DropIndex)
 }
 
-func (tm *TableManager) DropUnique(name string) {
-	addCommand(tm, []string{name}, DropUnique)
+func (tm *TableManager) DropUnique(name []string) {
+	addCommand(tm, name, DropUnique)
 }
 
 func (tm *TableManager) DropForeign(name string) {
 	addCommand(tm, []string{name}, DropForeignKey)
+}
+
+func (tm *TableManager) Primary(name []string) {
+	addCommand(tm, name, AddPrimaryKey)
 }
 
 func (tm *TableManager) Foreign(name string) *ForeignInfo {
