@@ -44,9 +44,50 @@ Array
     [5] => alter table `users` drop primary key
     [6] => alter table `users` add unique `users_email_unique`(`email`)
 )
+
+TABLE UPDATE:
+Schema::table('users', function (Blueprint $table) {
+            $table->string("dob");
+            $table->dropColumn("name");
+            $table->renameColumn("email", "Email");
+            $table->index(["Email", "dob"]);
+            $table->dropIndex(["Email", "dob"]);
+            $table->string("Email", 50)->first()->change();
+        });
+
+TURNS INTO
+Array
+(
+    [0] => ALTER TABLE users CHANGE email email VARCHAR(50) DEFAULT 'a@a.com' NOT NULL COLLATE utf8mb4_unicode_ci
+    [1] => alter table `users` add `dob` varchar(191) not null
+    [2] => alter table `users` drop `name`
+    [3] => ALTER TABLE users CHANGE email Email VARCHAR(191) DEFAULT 'a@a.com' NOT NULL
+    [4] => alter table `users` add index `users_email_dob_index`(`Email`, `dob`)
+    [5] => alter table `users` drop index `users_email_dob_index`
+)
+
+TODO:
+When schema is for Create:
+===============================
+Ignore ->change() method
+Run All the new entry column inside Create( ..... here ) block
+Setting default character set utf8mb4 collate 'utf8mb4_unicode_ci' after Create() block
+
+Then all the command is will be executed as ALTER COMMAND 1 by 1
+
+SCHEMA UPDATE
+==============================
+->change():
+	1. We need to grab the column definition and parsing it, and replace with new column definition
+	If we have a column like: `amount` VARCHAR(10) NOT NULL DEFAULT '1000' COMMENT 'Expensive data'
+	table.string('amount', 20)->default(100)->comment('Hello')->change();
+	It will turn into:
+	CHANGE `amount` `amount`VARCHAR(20) NOT NULL DEFAULT '100' COMMENT 'Hello'
+
+All the Statement will be executed as ALTER TABLE tableName **** command sequentially
 */
 
-func createColumn(tupleInfo *TupleInfo) string {
+func createColumn(tupleInfo *TupleInfo, tableInfo *Schema) string {
 	colunmName := fmt.Sprintf("`%s`", tupleInfo.Name)
 	dataType := tupleInfo.Type
 	columnLength := ""
@@ -57,6 +98,10 @@ func createColumn(tupleInfo *TupleInfo) string {
 	autoIncreament := ""
 	charSet := ""
 	colation := ""
+	alterTable := ""
+	if !tableInfo.CreateNew {
+		alterTable = fmt.Sprintf("ALTER TABLE `%s` ADD ", tableInfo.TableName)
+	}
 
 	if len(tupleInfo.Name) > 0 {
 		colunmName = tupleInfo.Name
@@ -117,7 +162,7 @@ func createColumn(tupleInfo *TupleInfo) string {
 	//TODO: Nedd to create INDEX:
 
 	/*	ALTER TABLE `Test Table 1` ADD `a` INT NOT NULL AFTER `options`, ADD `b` INT NOT NULL AFTER `a`, ADD `c` INT NOT NULL AFTER `b`, ADD `d` INT NOT NULL AFTER `c`, ADD `e` INT NOT NULL AFTER `d`, ADD `f` INT NOT NULL AFTER `e`, ADD `g` INT NOT NULL AFTER `f`, ADD `h` INT NOT NULL AFTER `g`, ADD `i` INT NOT NULL AFTER `h`, ADD `j` INT NOT NULL AFTER `i`, ADD PRIMARY KEY (`a`, `b`), ADD INDEX (`e`), ADD INDEX (`f`), ADD UNIQUE (`c`), ADD UNIQUE (`d`), ADD FULLTEXT (`g`), ADD FULLTEXT (`h`);*/
-	return fmt.Sprintf("`%s` %s%s%s%s%s%s%s%s%s", colunmName, dataType, columnLength, unSigned, charSet, colation, nullAbleText, defaultValue, autoIncreament, commentText)
+	return fmt.Sprintf("%s`%s` %s%s%s%s%s%s%s%s%s", alterTable, colunmName, dataType, columnLength, unSigned, charSet, colation, nullAbleText, defaultValue, autoIncreament, commentText)
 }
 
 func createCommand(tableName string, commandItem *Command) string {
@@ -178,19 +223,21 @@ func (qg *QueryGenerator) GetIndexedColums() {
 }
 
 func (qg *QueryGenerator) GenerateTupleStructure() {
-	//var tuples []string
-	var commands []string
-	/*for _, item := range qg.Table.Structures {
-		sqlStatement := createColumn(item)
+	var tuples []string
+	//var commands []string
+	for _, item := range qg.Table.Structures {
+		sqlStatement := createColumn(item, qg.Table.Schema)
+		fmt.Printf("%s\n", sqlStatement)
+
 		tuples = append(tuples, sqlStatement)
 	}
-	*/
-	for _, commandItem := range qg.Table.Commands {
+	/*for _, commandItem := range qg.Table.Commands {
 		sqlStatement := createCommand(qg.Table.Schema.TableName, commandItem)
 		commands = append(commands, sqlStatement)
 	}
+	*/
 
-	fmt.Printf("%v", commands)
+	//fmt.Printf("%v", tuples)
 }
 
 func (qg *QueryGenerator) PrepareQuery() {
