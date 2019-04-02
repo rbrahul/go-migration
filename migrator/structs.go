@@ -49,3 +49,8 @@ const (
 	AddUnique      = "ADD UNQIUE"
 	DropUnique     = "DROP UNQIUE"
 )
+
+const (
+	defineTuple   = "DEFINE_TUPLE"
+	defineCommand = "DEFINE_COMMAND"
+)

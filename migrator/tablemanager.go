@@ -2,11 +2,16 @@ package migrator
 
 import "fmt"
 
+type OperationQueue struct {
+	OperationType string
+	Command       *Command
+	TupleInfo     *TupleInfo
+}
+
 /*TableManager - Contains blue print of table */
 type TableManager struct {
 	Schema     *Schema
-	Structures []*TupleInfo
-	Commands   []*Command
+	Structures []*OperationQueue
 }
 
 /*TupleInfo - Contains blue print of Table Column */
@@ -83,7 +88,10 @@ func (tm *TableManager) FindExistingTuple() {
 *---------------------------------------*/
 func initializeTouple(tm *TableManager, name string, datatype string) *TupleInfo {
 	tuple := &TupleInfo{Name: name, Type: datatype}
-	tm.Structures = append(tm.Structures, tuple)
+	operation := &OperationQueue{}
+	operation.OperationType = defineTuple
+	operation.TupleInfo = tuple
+	tm.Structures = append(tm.Structures, operation)
 	return tuple
 }
 
@@ -278,10 +286,9 @@ func (tm *TableManager) ENUM(name string, values []string) *TupleInfo {
 }
 
 func addCommand(tm *TableManager, touples []string, commandType string) *Command {
-	command := &Command{}
-	command.OperationType = commandType
-	command.ToupleName = touples
-	tm.Commands = append(tm.Commands, command)
+	command := &Command{ToupleName: touples, OperationType: commandType}
+	operation := &OperationQueue{OperationType: defineCommand, Command: command}
+	tm.Structures = append(tm.Structures, operation)
 	return command
 }
 
@@ -364,8 +371,4 @@ func (tm *TableManager) Foreign(name string) *ForeignInfo {
 }
 
 func (tm *TableManager) AllCommands() {
-	for _, Item := range tm.Commands {
-		fmt.Printf("Touple", Item.ToupleName)
-		fmt.Printf("Foreign %v", Item.ForeignRelation)
-	}
 }

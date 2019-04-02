@@ -165,8 +165,9 @@ func createColumn(tupleInfo *TupleInfo, tableInfo *Schema) string {
 	return fmt.Sprintf("%s`%s` %s%s%s%s%s%s%s%s%s", alterTable, colunmName, dataType, columnLength, unSigned, charSet, colation, nullAbleText, defaultValue, autoIncreament, commentText)
 }
 
-func createCommand(tableName string, commandItem *Command) string {
-	alterCommand := fmt.Sprintf("ALTER TABLE `%s` ", tableName)
+func createCommand(commandItem *Command, tableInfo *Schema) string {
+	fmt.Printf("%s, %v", commandItem.OperationType, commandItem)
+	alterCommand := fmt.Sprintf("ALTER TABLE `%s` ", tableInfo.TableName)
 	ifExist := ""
 	command := ""
 
@@ -175,7 +176,7 @@ func createCommand(tableName string, commandItem *Command) string {
 	}
 	switch commandItem.OperationType {
 	case DropTable:
-		command = fmt.Sprintf("DROP TABLE%s %s", ifExist, tableName)
+		command = fmt.Sprintf("DROP TABLE%s %s", ifExist, tableInfo.TableName)
 	case RenameTable:
 		oldName := commandItem.ToupleName[0]
 		command = fmt.Sprintf("RENAME TABLE %s TO %s", oldName, commandItem.NewName)
@@ -190,17 +191,17 @@ func createCommand(tableName string, commandItem *Command) string {
 		oldName := commandItem.ToupleName[0]
 		command = fmt.Sprintf("%s RENAME INDEX %s TO %s", alterCommand, oldName, commandItem.NewName)
 	case AddForeignKey:
-		command = getNewForeignKeySyntax(tableName, commandItem)
+		command = getNewForeignKeySyntax(tableInfo.TableName, commandItem)
 	case DropForeignKey:
 		columnName := commandItem.ToupleName[0]
-		constraints := generateConstraints(tableName, columnName)
+		constraints := generateConstraints(tableInfo.TableName, columnName)
 		command = fmt.Sprintf("%s DROP FOREIGN KEY %s", alterCommand, constraints)
 	case AddPrimaryKey:
 		command = fmt.Sprintf("%s ADD PRIMARY KEY(%s)", alterCommand, commandItem.ToupleName[0])
 	case DropPrimaryKey:
 		command = fmt.Sprintf("%s DROP PRIMARY KEY", alterCommand)
 	case AddIndex:
-		indexedKey := generateIndexKey(tableName, commandItem.ToupleName)
+		indexedKey := generateIndexKey(tableInfo.TableName, commandItem.ToupleName)
 		command = fmt.Sprintf("%s ADD INDEX %s", alterCommand, indexedKey)
 	case AddUnique:
 		indexedKey := fmt.Sprintf("%s_unique(%s)", commandItem.ToupleName[0], commandItem.ToupleName[0])
@@ -209,7 +210,7 @@ func createCommand(tableName string, commandItem *Command) string {
 		indexedKey := fmt.Sprintf("%s_unique(%s)", commandItem.ToupleName[0], commandItem.ToupleName[0])
 		command = fmt.Sprintf("%s DROP INDEX %s", alterCommand, indexedKey)
 	case DropIndex:
-		indexPath := getIndexKeyPath(tableName, commandItem.ToupleName)
+		indexPath := getIndexKeyPath(tableInfo.TableName, commandItem.ToupleName)
 		command = fmt.Sprintf("%s DROP INDEX %s", alterCommand, indexPath)
 	}
 	return command
@@ -223,21 +224,29 @@ func (qg *QueryGenerator) GetIndexedColums() {
 }
 
 func (qg *QueryGenerator) GenerateTupleStructure() {
-	var tuples []string
-	//var commands []string
+	var tupleDefinitons []string
+	var alterStatements []string
 	for _, item := range qg.Table.Structures {
-		sqlStatement := createColumn(item, qg.Table.Schema)
-		fmt.Printf("%s\n", sqlStatement)
+		if item.OperationType == defineTuple {
+			sqlStatement := createColumn(item.TupleInfo, qg.Table.Schema)
+			if qg.Table.Schema.CreateNew {
+				tupleDefinitons = append(tupleDefinitons, sqlStatement)
+			} else {
+				alterStatements = append(alterStatements, sqlStatement)
+			}
+			//fmt.Printf("%s\n", sqlStatement)
+		}
 
-		tuples = append(tuples, sqlStatement)
+		if item.OperationType == defineCommand {
+			sqlStatement := createCommand(item.Command, qg.Table.Schema)
+			alterStatements = append(alterStatements, sqlStatement)
+			//fmt.Printf("%s\n", sqlStatement)
+		}
 	}
-	/*for _, commandItem := range qg.Table.Commands {
-		sqlStatement := createCommand(qg.Table.Schema.TableName, commandItem)
-		commands = append(commands, sqlStatement)
-	}
-	*/
+	fmt.Printf("Table Definitons: %v", tupleDefinitons)
+	fmt.Println("========================")
 
-	//fmt.Printf("%v", tuples)
+	fmt.Printf("Alter Definitons: %v", strings.Join(alterStatements, "\n"))
 }
 
 func (qg *QueryGenerator) PrepareQuery() {
