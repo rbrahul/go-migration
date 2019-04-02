@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+//QueryGenerator - Blueprint of Generating SQl Query
 type QueryGenerator struct {
 	Table             *TableManager
 	TableDefinition   string
@@ -163,8 +164,8 @@ func createCommand(tableName string, commandItem *Command) string {
 		indexedKey := fmt.Sprintf("%s_unique(%s)", commandItem.ToupleName[0], commandItem.ToupleName[0])
 		command = fmt.Sprintf("%s DROP INDEX %s", alterCommand, indexedKey)
 	case DropIndex:
-		columnNames := strings.Join(commandItem.ToupleName, ",")
-		command = fmt.Sprintf("%s ADD INDEX (%s)", alterCommand, columnNames)
+		indexPath := getIndexKeyPath(tableName, commandItem.ToupleName)
+		command = fmt.Sprintf("%s DROP INDEX %s", alterCommand, indexPath)
 	}
 	return command
 }

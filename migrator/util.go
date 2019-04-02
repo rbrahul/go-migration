@@ -46,6 +46,13 @@ func generateConstraints(tableName string, columnName string) string {
 	return fmt.Sprintf("%s_FK_%s", tableName, columnName)
 }
 
+func getIndexKeyPath(tableName string, columnNames []string) string {
+	indexes := strings.Join(arrayStrMap(columnNames, func(i int, item string) string {
+		return strings.ToLower(item)
+	}), "_")
+	return fmt.Sprintf("%s_%s_index", tableName, indexes)
+}
+
 func generateIndexKey(tableName string, columnNames []string) string {
 	indexes := strings.Join(arrayStrMap(columnNames, func(i int, item string) string {
 		return strings.ToLower(item)
