@@ -8,9 +8,19 @@ import (
 
 func main() {
 	fmt.Println("Hello world")
-	schema := &gm.Schema{}
+	db := &gm.Database{User: "root", Password: "mysql", Host: "localhost", DatabaseName: "laravel_blog"}
+	db.New()
+	db.AllTables()
+	db.ColumnNames("users")
+	tupleInf, err := db.TupleDefinition("users", "Email")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("%v", tupleInf)
+	fmt.Println("****************")
+	schema := &gm.Schema{CharSet: "utf8mb4", Collation: "utf8mb4_unicode_ci"}
 
-	schema.Table("users", func(table *gm.TableManager) {
+	schema.Create("users", func(table *gm.TableManager) {
 		table.String("user_name", 10).UseCurrent().Default("20").Comment("Important data")
 		table.String("amount", 10).Default("1000").Comment("Expensive data")
 		table.ENUM("category", []string{"Xx", "Xl", "M"}).Default("Xl").Comment("Shirt Size")

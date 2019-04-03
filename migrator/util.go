@@ -2,10 +2,17 @@ package migrator
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
 type mapCB func(int, string) string
+
+func CheckError(err error) {
+	if err != nil {
+		panic(err.Error())
+	}
+}
 
 func arrayStrMap(iterators []string, cb mapCB) []string {
 	mappedArray := []string{}
@@ -65,4 +72,18 @@ func prepareKeys(columnNames []string) string {
 	return strings.Join(arrayStrMap(columnNames, func(i int, item string) string {
 		return fmt.Sprintf("`%s`", item)
 	}), ",")
+}
+
+func ENUMValus(datatypeStr string) []string {
+	regxDataType := regexp.MustCompile(`(\w+)\((.*)\)`)
+	matchedElements := regxDataType.FindAllStringSubmatch(datatypeStr, -1)
+	if len(matchedElements[0]) > 0 {
+		if len(matchedElements[0][2]) > 0 {
+			var values = strings.Split(matchedElements[0][2], ",")
+			return arrayStrMap(values, func(i int, item string) string {
+				return strings.Replace(item, "'", "", -1)
+			})
+		}
+	}
+	return []string{}
 }

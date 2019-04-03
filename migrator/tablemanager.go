@@ -2,6 +2,7 @@ package migrator
 
 import "fmt"
 
+//OperationQueue - Contains all the structure changes both ColumnDefinition and ALTER Commands
 type OperationQueue struct {
 	OperationType string
 	Command       *Command
@@ -88,9 +89,7 @@ func (tm *TableManager) FindExistingTuple() {
 *---------------------------------------*/
 func initializeTouple(tm *TableManager, name string, datatype string) *TupleInfo {
 	tuple := &TupleInfo{Name: name, Type: datatype}
-	operation := &OperationQueue{}
-	operation.OperationType = defineTuple
-	operation.TupleInfo = tuple
+	operation := &OperationQueue{OperationType: defineTuple, TupleInfo: tuple}
 	tm.Structures = append(tm.Structures, operation)
 	return tuple
 }

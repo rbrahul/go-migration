@@ -166,7 +166,6 @@ func createColumn(tupleInfo *TupleInfo, tableInfo *Schema) string {
 }
 
 func createCommand(commandItem *Command, tableInfo *Schema) string {
-	fmt.Printf("%s, %v", commandItem.OperationType, commandItem)
 	alterCommand := fmt.Sprintf("ALTER TABLE `%s` ", tableInfo.TableName)
 	ifExist := ""
 	command := ""
