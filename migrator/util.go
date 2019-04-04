@@ -87,3 +87,55 @@ func ENUMValus(datatypeStr string) []string {
 	}
 	return []string{}
 }
+
+func findColumnChanges(oldTuple TupleInfo, newTuple TupleInfo) TupleInfo {
+	changedTuple := oldTuple
+	if oldTuple.Size != newTuple.Size {
+		changedTuple.Size = newTuple.Size
+	}
+
+	if oldTuple.Precision != newTuple.Precision && newTuple.Precision > 0 {
+		changedTuple.Precision = newTuple.Precision
+	}
+
+	if oldTuple.Type != newTuple.Type {
+		changedTuple.Type = newTuple.Type
+	}
+
+	changedTuple.EnumValues = newTuple.EnumValues
+
+	if oldTuple.CommentText != newTuple.CommentText && len(newTuple.CommentText) > 0 {
+		changedTuple.CommentText = newTuple.CommentText
+	}
+
+	if oldTuple.DefaultValue != newTuple.DefaultValue && len(newTuple.DefaultValue) > 0 {
+		changedTuple.DefaultValue = newTuple.DefaultValue
+	}
+
+	if oldTuple.Collate != newTuple.Collate && len(newTuple.Collate) > 0 {
+		changedTuple.Collate = newTuple.Collate
+	}
+
+	if oldTuple.CharSet != newTuple.CharSet && len(newTuple.CharSet) > 0 {
+		changedTuple.Collate = newTuple.Collate
+	}
+
+	if oldTuple.IsUnique != newTuple.IsUnique && newTuple.IsUnique {
+		changedTuple.IsUnique = newTuple.IsUnique
+	}
+
+	if oldTuple.IsAutoIncrement != newTuple.IsAutoIncrement && newTuple.IsAutoIncrement {
+		changedTuple.IsAutoIncrement = newTuple.IsAutoIncrement
+	}
+
+	if oldTuple.IsNullable != newTuple.IsNullable && newTuple.IsNullable {
+		changedTuple.IsNullable = newTuple.IsNullable
+	}
+
+	if oldTuple.IsUnSigned != newTuple.IsUnSigned && newTuple.IsUnSigned {
+		changedTuple.IsUnSigned = newTuple.IsUnSigned
+	}
+
+	changedTuple.ChangeOnly = newTuple.ChangeOnly
+	return changedTuple
+}

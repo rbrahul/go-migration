@@ -10,6 +10,7 @@ type QueryGenerator struct {
 	Table             *TableManager
 	TableDefinition   string
 	ToupleDefinitions []string
+	Database          *Database
 }
 
 /*
@@ -101,6 +102,9 @@ func createColumn(tupleInfo *TupleInfo, tableInfo *Schema) string {
 	alterTable := ""
 	if !tableInfo.CreateNew {
 		alterTable = fmt.Sprintf("ALTER TABLE `%s` ADD ", tableInfo.TableName)
+		if tupleInfo.ChangeOnly {
+			alterTable = fmt.Sprintf("ALTER TABLE `%s` CHANGE `%s` ", tableInfo.TableName, tupleInfo.Name)
+		}
 	}
 
 	if len(tupleInfo.Name) > 0 {
@@ -226,9 +230,20 @@ func (qg *QueryGenerator) GenerateTupleStructure() {
 	var tupleDefinitons []string
 	var alterStatements []string
 	for _, item := range qg.Table.Structures {
+		var sqlStatement string
 		if item.OperationType == defineTuple {
-			sqlStatement := createColumn(item.TupleInfo, qg.Table.Schema)
+			if qg.Table.Schema.CreateNew && item.TupleInfo.ChangeOnly {
+				continue
+			} else if !qg.Table.Schema.CreateNew && item.TupleInfo.ChangeOnly {
+				existingStructure, err := qg.Database.TupleDefinition(qg.Table.Schema.TableName, item.TupleInfo.Name)
+				CheckError(err)
+				changedTuple := findColumnChanges(existingStructure, *item.TupleInfo)
+				sqlStatement = createColumn(&changedTuple, qg.Table.Schema)
+			} else {
+				sqlStatement = createColumn(item.TupleInfo, qg.Table.Schema)
+			}
 			if qg.Table.Schema.CreateNew {
+
 				tupleDefinitons = append(tupleDefinitons, sqlStatement)
 			} else {
 				alterStatements = append(alterStatements, sqlStatement)
@@ -242,7 +257,7 @@ func (qg *QueryGenerator) GenerateTupleStructure() {
 			//fmt.Printf("%s\n", sqlStatement)
 		}
 	}
-	fmt.Printf("Table Definitons: %v", tupleDefinitons)
+	fmt.Printf("Table Definitons: %v", strings.Join(tupleDefinitons, "\n"))
 	fmt.Println("========================")
 
 	fmt.Printf("Alter Definitons: %v", strings.Join(alterStatements, "\n"))

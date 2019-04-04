@@ -7,6 +7,7 @@ type Schema struct {
 	Collation string
 	CharSet   string
 	Temporary bool
+	Database  *Database
 }
 
 /*CB -call back function*/
@@ -19,7 +20,7 @@ func (mg *Schema) Create(tableName string, cb CB) {
 	mg.CreateNew = true
 	table.Schema = mg
 
-	queryGenerator := &QueryGenerator{}
+	queryGenerator := &QueryGenerator{Database: mg.Database}
 	queryGenerator.Table = table
 	cb(table)
 
@@ -34,7 +35,7 @@ func (mg *Schema) Table(tableName string, cb CB) {
 	mg.CreateNew = false
 	table.Schema = mg
 
-	queryGenerator := &QueryGenerator{}
+	queryGenerator := &QueryGenerator{Database: mg.Database}
 	queryGenerator.Table = table
 	cb(table)
 

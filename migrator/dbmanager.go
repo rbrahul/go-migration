@@ -2,7 +2,6 @@ package migrator
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -84,17 +83,16 @@ func (db *Database) Columns(tableName string) []TupleInfo {
 		if collation != "NULL" {
 			tuple.Collate = collation
 		}
-		if strings.Contains(datatypeStr, "unsigned") {
+		if strings.Contains(strings.ToLower(datatypeStr), "unsigned") {
 			tuple.IsUnSigned = true
 		}
-		if strings.Contains(extra, "auto_increment") {
+		if strings.Contains(strings.ToLower(extra), "auto_increment") {
 			tuple.IsAutoIncrement = true
 		}
 		if len(matchedElements[0]) > 0 {
 			if len(matchedElements[0][1]) > 0 {
 				tuple.Type = strings.ToUpper(matchedElements[0][1])
 				if tuple.Type == "ENUM" {
-					fmt.Println(datatypeStr)
 					tuple.EnumValues = ENUMValus(datatypeStr)
 
 				}
@@ -134,7 +132,8 @@ func (db *Database) TupleDefinition(tableName string, tupleName string) (TupleIn
 			return item, nil
 		}
 	}
-	return TupleInfo{}, errors.New(fmt.Sprintf("Column `%s` doesn't exist on `%s` table", tupleName, tableName))
+
+	return TupleInfo{}, fmt.Errorf("Column `%s` doesn't exist on `%s` table", tupleName, tableName)
 }
 
 func (db *Database) ColumnExists(columnName string) bool {
