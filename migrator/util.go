@@ -46,7 +46,7 @@ func getNewForeignKeySyntax(tableName string, commandItem *Command) string {
 	}
 
 	constraints := generateConstraints(tableName, columnName)
-	return fmt.Sprintf("ALTER TABLE %s ADD CONSTRAINTS %s FOREIGN KEY(%s) REFERENCES `%s`(`%s`) ON DELETE %s ON UPDATE %s", tableName, constraints, columnName, relativeTable, references, onDelete, onUpdate)
+	return fmt.Sprintf("ALTER TABLE `%s` ADD CONSTRAINT %s FOREIGN KEY FK_%s(`%s`) REFERENCES %s(`%s`) ON DELETE %s ON UPDATE %s", tableName, constraints, columnName, columnName, relativeTable, references, onDelete, onUpdate)
 }
 
 func generateConstraints(tableName string, columnName string) string {
@@ -65,7 +65,7 @@ func generateIndexKey(tableName string, columnNames []string) string {
 		return strings.ToLower(item)
 	}), "_")
 	keys := prepareKeys(columnNames)
-	return fmt.Sprintf("%s_%s_index(%s)", tableName, indexes, keys)
+	return fmt.Sprintf("`%s_%s_index` (%s)", tableName, indexes, keys)
 }
 
 func prepareKeys(columnNames []string) string {
@@ -74,7 +74,7 @@ func prepareKeys(columnNames []string) string {
 	}), ",")
 }
 
-func ENUMValus(datatypeStr string) []string {
+func getENUMValus(datatypeStr string) []string {
 	regxDataType := regexp.MustCompile(`(\w+)\((.*)\)`)
 	matchedElements := regxDataType.FindAllStringSubmatch(datatypeStr, -1)
 	if len(matchedElements[0]) > 0 {

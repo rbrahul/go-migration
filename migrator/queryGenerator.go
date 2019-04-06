@@ -8,8 +8,9 @@ import (
 //QueryGenerator - Blueprint of Generating SQl Query
 type QueryGenerator struct {
 	Table             *TableManager
-	TableDefinition   string
+	AlterDefinitions  []string
 	ToupleDefinitions []string
+	SQLQuery          string
 	Database          *Database
 }
 
@@ -151,6 +152,10 @@ func createColumn(tupleInfo *TupleInfo, tableInfo *Schema) string {
 		autoIncreament = " AUTO_INCREMENT"
 	}
 
+	if tupleInfo.IsPrimary {
+		autoIncreament = " AUTO_INCREMENT PRIMARY KEY"
+	}
+
 	if len(strings.TrimSpace(tupleInfo.Collate)) > 0 {
 		colation = fmt.Sprintf(" COLLATE %s", tupleInfo.Collate)
 	}
@@ -169,7 +174,7 @@ func createColumn(tupleInfo *TupleInfo, tableInfo *Schema) string {
 	return fmt.Sprintf("%s`%s` %s%s%s%s%s%s%s%s%s", alterTable, colunmName, dataType, columnLength, unSigned, charSet, colation, nullAbleText, defaultValue, autoIncreament, commentText)
 }
 
-func createCommand(commandItem *Command, tableInfo *Schema) string {
+func createCommand(qg *QueryGenerator, commandItem *Command, tableInfo *Schema) string {
 	alterCommand := fmt.Sprintf("ALTER TABLE `%s` ", tableInfo.TableName)
 	ifExist := ""
 	command := ""
@@ -188,8 +193,21 @@ func createCommand(commandItem *Command, tableInfo *Schema) string {
 		command = fmt.Sprintf("%s DROP COLUMN%s %s", alterCommand, ifExist, columnNames)
 	case RenameTuple:
 		oldName := commandItem.ToupleName[0]
-		//TODO: Need to pass also Datatype(Size), so we need to get the current column info first
-		command = fmt.Sprintf("%s CHANGE %s TO %s", alterCommand, oldName, commandItem.NewName)
+		existingStructure, err := qg.Database.TupleDefinition(qg.Table.Schema.TableName, oldName)
+		CheckError(err)
+		fmt.Println(existingStructure.Type, existingStructure.Size, existingStructure.Precision)
+		dataType := existingStructure.Type
+		if existingStructure.Size > 0 && existingStructure.Precision == 0 {
+			dataType = fmt.Sprintf("%s(%d)", dataType, existingStructure.Size)
+		}
+		if existingStructure.Size > 0 && existingStructure.Precision > 0 {
+			dataType = fmt.Sprintf("%s(%d,%d)", dataType, existingStructure.Size, existingStructure.Precision)
+		}
+
+		if !existingStructure.IsNullable {
+			dataType = fmt.Sprintf("%s NOT NULL", dataType)
+		}
+		command = fmt.Sprintf("%s CHANGE `%s` `%s` %s", alterCommand, oldName, commandItem.NewName, dataType)
 	case RenameIndex:
 		oldName := commandItem.ToupleName[0]
 		command = fmt.Sprintf("%s RENAME INDEX %s TO %s", alterCommand, oldName, commandItem.NewName)
@@ -205,7 +223,7 @@ func createCommand(commandItem *Command, tableInfo *Schema) string {
 		command = fmt.Sprintf("%s DROP PRIMARY KEY", alterCommand)
 	case AddIndex:
 		indexedKey := generateIndexKey(tableInfo.TableName, commandItem.ToupleName)
-		command = fmt.Sprintf("%s ADD INDEX %s", alterCommand, indexedKey)
+		command = fmt.Sprintf("%sADD INDEX %s", alterCommand, indexedKey)
 	case AddUnique:
 		indexedKey := fmt.Sprintf("%s_unique(%s)", commandItem.ToupleName[0], commandItem.ToupleName[0])
 		command = fmt.Sprintf("%s ADD UNIQUE INDEX %s", alterCommand, indexedKey)
@@ -219,14 +237,32 @@ func createCommand(commandItem *Command, tableInfo *Schema) string {
 	return command
 }
 
-func (qg *QueryGenerator) GenerateTableStructure() {
-	qg.GenerateTupleStructure()
+func (qg *QueryGenerator) generateCreateTableStructure() string {
+	charset := "utf8mb4"
+	collation := "utf8mb4_unicode_ci"
+	comment := qg.Table.Schema.Comment
+
+	if len(strings.TrimSpace(qg.Table.Schema.CharSet)) > 0 {
+		charset = qg.Table.Schema.CharSet
+	}
+
+	if len(strings.TrimSpace(qg.Table.Schema.Collation)) > 0 {
+		collation = qg.Table.Schema.Collation
+	}
+
+	if len(strings.TrimSpace(qg.Table.Schema.Comment)) > 0 {
+		comment = fmt.Sprintf("COMMENT = '%s'", qg.Table.Schema.Comment)
+	}
+	engine := qg.Database.Engine
+	fmt.Println("ENGINE:", engine)
+	return fmt.Sprintf("CREATE TABLE `%s`(%s) ENGINE = %s CHARACTER SET %s COLLATE %s %s", qg.Table.Schema.TableName, strings.Join(qg.ToupleDefinitions, ",\n"), engine, charset, collation, comment)
 }
 
-func (qg *QueryGenerator) GetIndexedColums() {
+func (qg *QueryGenerator) generateAlterCommands() string {
+	return strings.Join(qg.AlterDefinitions, ";\n")
 }
 
-func (qg *QueryGenerator) GenerateTupleStructure() {
+func (qg *QueryGenerator) generateTupleStructure() *QueryGenerator {
 	var tupleDefinitons []string
 	var alterStatements []string
 	for _, item := range qg.Table.Structures {
@@ -243,26 +279,49 @@ func (qg *QueryGenerator) GenerateTupleStructure() {
 				sqlStatement = createColumn(item.TupleInfo, qg.Table.Schema)
 			}
 			if qg.Table.Schema.CreateNew {
-
 				tupleDefinitons = append(tupleDefinitons, sqlStatement)
 			} else {
 				alterStatements = append(alterStatements, sqlStatement)
 			}
-			//fmt.Printf("%s\n", sqlStatement)
 		}
 
 		if item.OperationType == defineCommand {
-			sqlStatement := createCommand(item.Command, qg.Table.Schema)
+			sqlStatement := createCommand(qg, item.Command, qg.Table.Schema)
 			alterStatements = append(alterStatements, sqlStatement)
-			//fmt.Printf("%s\n", sqlStatement)
 		}
 	}
-	fmt.Printf("Table Definitons: %v", strings.Join(tupleDefinitons, "\n"))
-	fmt.Println("========================")
-
-	fmt.Printf("Alter Definitons: %v", strings.Join(alterStatements, "\n"))
+	qg.ToupleDefinitions = tupleDefinitons
+	qg.AlterDefinitions = alterStatements
+	return qg
 }
 
-func (qg *QueryGenerator) PrepareQuery() {
+func (qg *QueryGenerator) prepareQuery() *QueryGenerator {
+	if qg.Table.Schema.CreateNew {
+		newTableStructure := qg.generateCreateTableStructure()
+		qg.SQLQuery = fmt.Sprintf("%s;", newTableStructure)
+	}
+	return qg
+}
 
+func (qg *QueryGenerator) executeSQLStatements() {
+	if len(qg.SQLQuery) > 0 {
+		fmt.Printf("%s\n", qg.SQLQuery)
+		err := qg.Database.ExecuteQuery(qg.SQLQuery)
+		if err != nil {
+			panic(err)
+		}
+	}
+	for key, sqlQuery := range qg.AlterDefinitions {
+		fmt.Printf("%d: %s\n", key, sqlQuery)
+		err := qg.Database.ExecuteQuery(sqlQuery)
+		if err != nil {
+			panic(err)
+		}
+	}
+	fmt.Println("Migration successfull")
+}
+
+//ProcessMigration - Process all the Migration statement described in migration files in Create or Table Section
+func (qg *QueryGenerator) ProcessMigration() {
+	qg.generateTupleStructure().prepareQuery().executeSQLStatements()
 }

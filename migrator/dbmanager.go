@@ -18,30 +18,38 @@ type Database struct {
 	DatabaseName   string
 	DatabasePrefix string
 	Port           int
-	DB             *sql.DB
+	Engine         string
+	DbCon          *sql.DB
 }
 
-func (db *Database) New() {
-	if db.Port == 0 {
-		db.Port = 3306
+var DefaultEngine string
+var DB *Database
+
+func InitDatabase() *Database {
+	DB := &Database{User: "root", Password: "mysql", Host: "localhost", DatabaseName: "laravel_blog"}
+	if DB.Port == 0 {
+		DB.Port = 3306
 	}
-	if len(db.Driver) == 0 {
-		db.Driver = "mysql"
+	if len(DB.Driver) == 0 {
+		DB.Driver = "mysql"
 	}
-	URL := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8&parseTime=True", db.User, db.Password, db.Host, db.Port, db.DatabaseName)
-	session, err := sql.Open(db.Driver, URL)
+	if len(DB.Engine) == 0 {
+		DB.Engine = "InnoDB"
+	}
+	URL := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8&parseTime=True", DB.User, DB.Password, DB.Host, DB.Port, DB.DatabaseName)
+	session, err := sql.Open(DB.Driver, URL)
 	CheckError(err)
-	db.DB = session
-	fmt.Printf("%v", session.Stats())
+	DB.DbCon = session
+	return DB
 }
 
-func (db *Database) ExecuteQuery(query string) {
-	_, err := db.DB.Query(query)
-	CheckError(err)
+func (db *Database) ExecuteQuery(query string) error {
+	_, err := db.DbCon.Query(query)
+	return err
 }
 
 func (db *Database) AllTables() []string {
-	rows, err := db.DB.Query("SHOW TABLES")
+	rows, err := db.DbCon.Query("SHOW TABLES")
 	CheckError(err)
 	var tables []string
 	for rows.Next() {
@@ -57,7 +65,8 @@ func (db *Database) Columns(tableName string) []TupleInfo {
 	//do whatever
 	//var name string
 	var tuples []TupleInfo
-	rows, err := db.DB.Query(fmt.Sprintf("SHOW FULL COLUMNS FROM %s", tableName))
+
+	rows, err := db.DbCon.Query(fmt.Sprintf("SHOW FULL COLUMNS FROM %s", tableName))
 	CheckError(err)
 	for rows.Next() {
 		var name string
@@ -93,7 +102,7 @@ func (db *Database) Columns(tableName string) []TupleInfo {
 			if len(matchedElements[0][1]) > 0 {
 				tuple.Type = strings.ToUpper(matchedElements[0][1])
 				if tuple.Type == "ENUM" {
-					tuple.EnumValues = ENUMValus(datatypeStr)
+					tuple.EnumValues = getENUMValus(datatypeStr)
 
 				}
 			}

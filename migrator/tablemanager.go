@@ -116,6 +116,7 @@ func (tpl *TupleInfo) Unsigned() *TupleInfo {
 
 func (tpl *TupleInfo) Autoincrement() *TupleInfo {
 	tpl.IsAutoIncrement = true
+	tpl.IsPrimary = true
 	return tpl
 }
 
